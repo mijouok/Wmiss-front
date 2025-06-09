@@ -12,39 +12,52 @@ let showTwitterPopup = ref(false);
 const avatarUrl = ref('');
 
 let videoFormatExist = ref(false);
+let pictureFormatExist = ref(false);
 let fileList = ref([]);
 
 // 上传之前的钩子
 const beforeAvatarUpload = (files) => {
   console.log('beforeAvatarUpload:', files);
   fileList.value.push(files);
-  console.log('beforeAvatarUpload:', videoFormatExist);
+  console.log('beforeAvatarUpload:videoFormatExist', videoFormatExist.value);
   console.log('beforeAvatarUpload:', fileList.value.length);
   const isJPG = files.type === 'image/jpeg' || files.type === 'image/png';
   const isVideo = chkVideoFormat(files.type);
+
   if (!isJPG && !isVideo) {
     ElMessage.error('上传文件只能是图片(jpg/png)或者是视频格式(.mp4/.mkv/.ogg)!');
     fileList.value.remove(files);
     return false;
   }
-  else {
-    const fileSize = files.size / 1024 / 1024;
+  fileList.value.forEach(file => {
+    console.log('beforeAvatarUpload:', file.type);
+    if (chkVideoFormat(file.type)) {
+      videoFormatExist.value = true;
+    } else {
+      pictureFormatExist.value = true;
+    }
+    console.log('beforeAvatarUpload:', videoFormatExist.value);
+    console.log('beforeAvatarUpload:', pictureFormatExist.value);
+  })
 
-    if (isJPG) {
-      if (fileSize > 50) {
-        ElMessage.error('上传文件的图片大小不能超过 50MB!');
-        fileList.value.remove(files);
-        return false;
-      }
-    } else if (isVideo) {
-      if (fileSize > 300) {
-        ElMessage.error('上传文件的视频大小不能超过 300MB!')
-        fileList.value.remove(files);
-        videoFormatExist = false;
-        return false;
-      }
+  const fileSize = files.size / 1024 / 1024;
+
+  if (isJPG) {
+    if (fileSize > 50) {
+      ElMessage.error('上传文件的图片大小不能超过50MB!');
+      fileList.value.remove(files);
+      return false;
+    }
+  } else if (isVideo) {
+    if (fileSize > 300) {
+      ElMessage.error('上传文件的视频大小不能超过300MB!')
+      fileList.value.remove(files);
+      return false;
     }
   }
+
+  console.log('videoFormatExist:', videoFormatExist.value);
+  console.log('fileList.value.length:', fileList.value.length);
   if (!videoFormatExist && fileList.value.length > 9) {
     ElMessage.error('上传文件的图片数量不能超过9个!');
     return false;
@@ -52,7 +65,6 @@ const beforeAvatarUpload = (files) => {
     ElMessage.error('上传文件的视频数量不能超过1个!');
     return false;
   }
-
 
   return true;
 }
@@ -113,6 +125,7 @@ function uploadThumbnail(e) {
 // +
 function uploadTwitter(e) {
   fileList = ref([]);
+  videoFormatExist = ref(false);
   return showTwitterPopup.value = !showTwitterPopup.value;
 }
 
