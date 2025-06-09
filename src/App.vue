@@ -17,9 +17,7 @@ let fileList = ref([]);
 
 // 上传之前的钩子
 const beforeAvatarUpload = (files) => {
-  console.log('beforeAvatarUpload:', files);
   fileList.value.push(files);
-  console.log('beforeAvatarUpload:videoFormatExist', videoFormatExist.value);
   console.log('beforeAvatarUpload:', fileList.value.length);
   const isJPG = files.type === 'image/jpeg' || files.type === 'image/png';
   const isVideo = chkVideoFormat(files.type);
@@ -29,6 +27,7 @@ const beforeAvatarUpload = (files) => {
     fileList.value.remove(files);
     return false;
   }
+  videoFormatExist.value = false;
   fileList.value.forEach(file => {
     console.log('beforeAvatarUpload:', file.type);
     if (chkVideoFormat(file.type)) {
@@ -58,11 +57,15 @@ const beforeAvatarUpload = (files) => {
 
   console.log('videoFormatExist:', videoFormatExist.value);
   console.log('fileList.value.length:', fileList.value.length);
-  if (!videoFormatExist && fileList.value.length > 9) {
+  if (!videoFormatExist.value && fileList.value.length > 9) {
     ElMessage.error('上传文件的图片数量不能超过9个!');
+    fileList.value.remove(files);
     return false;
-  } else if (videoFormatExist && fileList.value.length > 1) {
+  }
+
+  if (videoFormatExist.value && fileList.value.length > 1) {
     ElMessage.error('上传文件的视频数量不能超过1个!');
+    fileList.value.remove(files);
     return false;
   }
 
