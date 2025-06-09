@@ -11,51 +11,49 @@ let showPopup = ref(false);
 let showTwitterPopup = ref(false);
 const avatarUrl = ref('');
 
-let videoFormat = ref(undefined);
+let videoFormatExist = ref(false);
 let fileList = ref([]);
 
 // 上传之前的钩子
 const beforeAvatarUpload = (files) => {
   console.log('beforeAvatarUpload:', files);
-  fileList.push(files);
-
-  console.log('beforeAvatarUpload:', fileList);
-  console.log('beforeAvatarUpload:', videoFormat);
-  console.log('beforeAvatarUpload:', fileList.length);
-  if (videoFormat !== undefined && !videoFormat && fileList.length > 9) {
-    ElMessage.error('上传文件的图片数量不能超过 9个!');
-    return false;
-  } else if (videoFormat !== undefined && videoFormat && fileList.length > 1) {
-    ElMessage.error('上传文件的视频数量不能超过 1个!');
+  fileList.value.push(files);
+  console.log('beforeAvatarUpload:', videoFormatExist);
+  console.log('beforeAvatarUpload:', fileList.value.length);
+  const isJPG = files.type === 'image/jpeg' || files.type === 'image/png';
+  const isVideo = chkVideoFormat(files.type);
+  if (!isJPG && !isVideo) {
+    ElMessage.error('上传文件只能是图片(jpg/png)或者是视频格式(.mp4/.mkv/.ogg)!');
+    fileList.value.remove(files);
     return false;
   }
-  files.forEach(file => {
-    // 判断是否有别的格式
-    const isJPG = file.type === 'image/jpeg' || file.type === 'image/png';
-    const isVideo = chkVideoFormat(file.type);
-    videoFormat = isVideo;
-    const fileSize = file.size / 1024 / 1024;
+  else {
+    const fileSize = files.size / 1024 / 1024;
 
-    if (!isJPG && !isVideo) {
-      ElMessage.error('上传文件只能是图片(jpg/png)或者是视频格式(.mp4/.mkv/.ogg)!');
-      return false;
-      // 判断是否图片里是否夹着其他格式
-    } else if (isJPG && isVideo) {
-      ElMessage.error('上传文件只能是纯图片(jpg/png)或者是纯视频格式(.mp4/.mkv/.ogg)!');
-      return false;
-    } else {
-      if (isJPG) {
-        if (fileSize > 50) {
-          ElMessage.error('上传文件的图片大小不能超过 50MB!');
-          return false;
-        }
-      } else if (isVideo) {
-        if (fileSize > 300) {
-          ElMessage.error('上传文件的视频大小不能超过 300MB!')
-        }
+    if (isJPG) {
+      if (fileSize > 50) {
+        ElMessage.error('上传文件的图片大小不能超过 50MB!');
+        fileList.value.remove(files);
+        return false;
+      }
+    } else if (isVideo) {
+      if (fileSize > 300) {
+        ElMessage.error('上传文件的视频大小不能超过 300MB!')
+        fileList.value.remove(files);
+        videoFormatExist = false;
+        return false;
       }
     }
-  });
+  }
+  if (!videoFormatExist && fileList.value.length > 9) {
+    ElMessage.error('上传文件的图片数量不能超过9个!');
+    return false;
+  } else if (videoFormatExist && fileList.value.length > 1) {
+    ElMessage.error('上传文件的视频数量不能超过1个!');
+    return false;
+  }
+
+
   return true;
 }
 
