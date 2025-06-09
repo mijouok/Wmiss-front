@@ -15,12 +15,13 @@ let videoFormat = ref(undefined);
 let fileList = ref([]);
 
 // 上传之前的钩子
-const beforeAvatarUpload = (files, fileList) => {
+const beforeAvatarUpload = (files) => {
   console.log('beforeAvatarUpload:', files);
+  fileList.push(files);
+
   console.log('beforeAvatarUpload:', fileList);
   console.log('beforeAvatarUpload:', videoFormat);
-  fileList.push(files);
-  console.log('beforeAvatarUpload:', fileList);
+  console.log('beforeAvatarUpload:', fileList.length);
   if (videoFormat !== undefined && !videoFormat && fileList.length > 9) {
     ElMessage.error('上传文件的图片数量不能超过 9个!');
     return false;
