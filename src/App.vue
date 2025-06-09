@@ -8,27 +8,58 @@ import 'element-plus/dist/index.css'
 
 
 let showPopup = ref(false);
+let showTwitterPopup = ref(false);
 const avatarUrl = ref('');
 
-// +
-const handleAdd = (file) => {
-
-}
+let videoFormat = ref(undefined);
+let fileList = ref([]);
 
 // 上传之前的钩子
-const beforeAvatarUpload = (file) => {
-  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png';
-  const isLt2M = file.size / 1024 / 1024 < 50;
+const beforeAvatarUpload = (files, fileList) => {
+  console.log('beforeAvatarUpload:', files);
+  console.log('beforeAvatarUpload:', fileList);
+  console.log('beforeAvatarUpload:', videoFormat);
+  fileList.push(files);
+  console.log('beforeAvatarUpload:', fileList);
+  if (videoFormat !== undefined && !videoFormat && fileList.length > 9) {
+    ElMessage.error('上传文件的图片数量不能超过 9个!');
+    return false;
+  } else if (videoFormat !== undefined && videoFormat && fileList.length > 1) {
+    ElMessage.error('上传文件的视频数量不能超过 1个!');
+    return false;
+  }
+  files.forEach(file => {
+    // 判断是否有别的格式
+    const isJPG = file.type === 'image/jpeg' || file.type === 'image/png';
+    const isVideo = chkVideoFormat(file.type);
+    videoFormat = isVideo;
+    const fileSize = file.size / 1024 / 1024;
 
-  if (!isJPG) {
-    ElMessage.error('头像图片只能是 JPG/PNG 格式!');
-    return false;
-  }
-  if (!isLt2M) {
-    ElMessage.error('头像图片大小不能超过 50MB!');
-    return false;
-  }
+    if (!isJPG && !isVideo) {
+      ElMessage.error('上传文件只能是图片(jpg/png)或者是视频格式(.mp4/.mkv/.ogg)!');
+      return false;
+      // 判断是否图片里是否夹着其他格式
+    } else if (isJPG && isVideo) {
+      ElMessage.error('上传文件只能是纯图片(jpg/png)或者是纯视频格式(.mp4/.mkv/.ogg)!');
+      return false;
+    } else {
+      if (isJPG) {
+        if (fileSize > 50) {
+          ElMessage.error('上传文件的图片大小不能超过 50MB!');
+          return false;
+        }
+      } else if (isVideo) {
+        if (fileSize > 300) {
+          ElMessage.error('上传文件的视频大小不能超过 300MB!')
+        }
+      }
+    }
+  });
   return true;
+}
+
+const chkVideoFormat = (fileType) => {
+  return fileType === 'video/mp4' || fileType === 'video/webm' || fileType === 'video/ogg';
 }
 
 // 上传成功的处理函数
@@ -80,6 +111,11 @@ function uploadThumbnail(e) {
   console.log("showPopup:", !showPopup.value);
   return showPopup.value = !showPopup.value;
 }
+// +
+function uploadTwitter(e) {
+  fileList = ref([]);
+  return showTwitterPopup.value = !showTwitterPopup.value;
+}
 
 function upload() {
 
@@ -112,7 +148,7 @@ function upload() {
     <div style="border: 1px solid #ccc"></div>
     <div class="title">
       <span style="font-size: large">大事记</span>
-      <span style="width: 5%; height: 5%"><img src="./assets/加号.svg" style="object-fit: fill; width: 100%;height: 100%" @click="handleAdd"></span>
+      <span style="width: 5%; height: 5%"><img src="./assets/加号.svg" style="object-fit: fill; width: 100%;height: 100%" @click="uploadTwitter"></span>
     </div>
     <div class="content">
       <!--    循环div-->
@@ -139,16 +175,52 @@ function upload() {
           <el-upload
               class="avatar-uploader"
               action="http://localhost:8080/api/v1/main/baby/uploadThumbnail"
-              :show-file-list="false"
+              :show-file-list="true"
               :on-success="handleAvatarSuccess"
               :on-error="handleAvatarError"
               :before-upload="beforeAvatarUpload"
               :headers="shangchuanpeizhi.headers"
+              multiple
+              :file-list="fileList"
           >
             <el-button type="primary">点击上传头像</el-button>
             <template #tip>
               <div class="el-upload__tip">
                 只能上传 jpg/png 文件，且不超过 50MB
+              </div>
+            </template>
+          </el-upload>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- not avatar pop up -->
+  <div v-if="showTwitterPopup" class="popup">
+    <div class="popup-content">
+      <span @click="uploadTwitter" class="popup-close">&times;</span>
+      <div class="popup-section1">
+        <div class="img-preview">
+          <img :src="avatarUrl" alt="" class="popup-img" @error="e => {e.target.src=defaultImage}">
+        </div>
+        &nbsp;
+        &nbsp;
+        <div>
+          <el-upload
+              class="avatar-uploader"
+              action="http://localhost:8080/api/v1/main/baby/uploadThumbnail"
+              :show-file-list="true"
+              :on-success="handleAvatarSuccess"
+              :on-error="handleAvatarError"
+              :before-upload="beforeAvatarUpload"
+              :headers="shangchuanpeizhi.headers"
+              multiple
+              :file-list="fileList"
+          >
+            <el-button type="primary">点击上传图片/视频</el-button>
+            <template #tip>
+              <div class="el-upload__tip">
+                只能上传 jpg/png 图片，且不超过 50MB，或mp4/mkv/ogg 视频，且不超过300M
               </div>
             </template>
           </el-upload>
