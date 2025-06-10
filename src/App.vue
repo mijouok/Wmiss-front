@@ -2,55 +2,59 @@
 import defaultImage from "./assets/default.jpg";
 import axios from "axios";
 import {ref} from "vue";
-// import JUpload from '@/components/jeecg/JUpload';
 import { ElMessage } from 'element-plus'
 import 'element-plus/dist/index.css'
+import ImageSwiper from './components/importedSwiper/preview/multiplePics.vue'
 
 
 let showPopup = ref(false);
 let showTwitterPopup = ref(false);
 const avatarUrl = ref('');
-
+const shangchuanpeizhi = {
+  headers: {
+    'Content-Type': 'multipart/form-data'
+  }
+}
 let videoFormatExist = ref(false);
 let pictureFormatExist = ref(false);
 let fileList = ref([]);
+let swiperImages = ref([]);
 
 // 上传之前的钩子
-const beforeAvatarUpload = (files) => {
+const beforeAvatarUpload = async (files) => {
+
+  const file = files;
+
   fileList.value.push(files);
-  console.log('beforeAvatarUpload:', fileList.value.length);
-  const isJPG = files.type === 'image/jpeg' || files.type === 'image/png';
-  const isVideo = chkVideoFormat(files.type);
+  const isJPG = file.type === 'image/jpeg' || file.type === 'image/png';
+  const isVideo = chkVideoFormat(file.type);
 
   if (!isJPG && !isVideo) {
     ElMessage.error('上传文件只能是图片(jpg/png)或者是视频格式(.mp4/.mkv/.ogg)!');
-    fileList.value.remove(files);
+    fileList.value.pop();
     return false;
   }
   videoFormatExist.value = false;
   fileList.value.forEach(file => {
-    console.log('beforeAvatarUpload:', file.type);
     if (chkVideoFormat(file.type)) {
       videoFormatExist.value = true;
     } else {
       pictureFormatExist.value = true;
     }
-    console.log('beforeAvatarUpload:', videoFormatExist.value);
-    console.log('beforeAvatarUpload:', pictureFormatExist.value);
   })
 
-  const fileSize = files.size / 1024 / 1024;
+  const fileSize = file.size / 1024 / 1024;
 
   if (isJPG) {
     if (fileSize > 50) {
       ElMessage.error('上传文件的图片大小不能超过50MB!');
-      fileList.value.remove(files);
+      fileList.value.pop();
       return false;
     }
   } else if (isVideo) {
     if (fileSize > 300) {
       ElMessage.error('上传文件的视频大小不能超过300MB!')
-      fileList.value.remove(files);
+      fileList.value.pop();
       return false;
     }
   }
@@ -59,17 +63,23 @@ const beforeAvatarUpload = (files) => {
   console.log('fileList.value.length:', fileList.value.length);
   if (!videoFormatExist.value && fileList.value.length > 9) {
     ElMessage.error('上传文件的图片数量不能超过9个!');
-    fileList.value.remove(files);
+    fileList.value.pop();
     return false;
   }
 
   if (videoFormatExist.value && fileList.value.length > 1) {
     ElMessage.error('上传文件的视频数量不能超过1个!');
-    fileList.value.remove(files);
+    fileList.value.pop();
     return false;
   }
-
-  return true;
+  try {
+    swiperImages.value = await convertImagesUrl(fileList.value);
+    console.log('swiperImages:', swiperImages.value);
+  } catch (error) {
+    ElMessage.error('图片处理失败，请重试');
+    fileList.value.pop();
+  }
+  return false;
 }
 
 const chkVideoFormat = (fileType) => {
@@ -85,13 +95,28 @@ const handleAvatarSuccess = (response) => {
 }
 // 上传失败的处理函数
 const handleAvatarError = () => {
+  fileList.value.pop(); //删除最后一个元素
   ElMessage.error('上传失败，请重试');
 }
-
-let shangchuanpeizhi = {
-  headers: {
-    'Content-Type': 'multipart/form-data'
+const convertImagesUrl = (fileList) => {
+  if (fileList && fileList.length === 0) {
+    return Promise.resolve([]);
   }
+  return new Promise((resolve) => {
+    let images = [];
+    let loadedCount = 0;
+    fileList.forEach(file => {
+      let reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = function(e) {
+        images.push(e.target.result);
+        loadedCount++;
+        if (loadedCount === fileList.length) {
+          resolve(images);
+        }
+      }
+    })
+  })
 }
 
 function thumbnailChange(e) {
@@ -105,7 +130,7 @@ function thumbnailChange(e) {
     let img = document.querySelector('.popup-section1 img')
     img.src = e.target.result;
 
-    const formData = new FormData();formData.append('file', file);
+    const formData = new FormData();formData.append('files', file);
     console.log('newFile:{}', formData)
     // upload
     axios.post('http://localhost:8080/api/v1/main/baby/uploadThumbnail', formData, {
@@ -121,21 +146,15 @@ function thumbnailChange(e) {
 }
 
 function uploadThumbnail(e) {
-  console.log("showPopup:", showPopup.value);
-  console.log("showPopup:", !showPopup.value);
   return showPopup.value = !showPopup.value;
 }
 // +
 function uploadTwitter(e) {
-  fileList = ref([]);
+  fileList.value = [];
+  swiperImages.value = [];
   videoFormatExist = ref(false);
   return showTwitterPopup.value = !showTwitterPopup.value;
 }
-
-function upload() {
-
-}
-
 </script>
 
 <template>
@@ -216,19 +235,16 @@ function upload() {
       <span @click="uploadTwitter" class="popup-close">&times;</span>
       <div class="popup-section1">
         <div class="img-preview">
-          <img :src="avatarUrl" alt="" class="popup-img" @error="e => {e.target.src=defaultImage}">
+          <ImageSwiper :images="swiperImages" style="height: 100%;width: 100%;"/>
         </div>
         &nbsp;
         &nbsp;
         <div>
           <el-upload
               class="avatar-uploader"
-              action="http://localhost:8080/api/v1/main/baby/uploadThumbnail"
-              :show-file-list="true"
-              :on-success="handleAvatarSuccess"
-              :on-error="handleAvatarError"
+              :auto-upload="true"
+              :show-file-list="false"
               :before-upload="beforeAvatarUpload"
-              :headers="shangchuanpeizhi.headers"
               multiple
               :file-list="fileList"
           >
@@ -325,6 +341,9 @@ function upload() {
   top: 0;
   width: 100%; /* 全宽 */
   height: 100%; /* 全高 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 
   background-color: rgba(0,0,0,0.4); /* 背景颜色，半透明 */
 }
@@ -354,8 +373,8 @@ function upload() {
   cursor: pointer;
 }
 .img-preview {
-display: inline-block;
-  width: 25%;
+  display: inline-block;
+  width: 80%;
   height: 50%;
   background-color: #fff;
   border: 1px solid #ccc;
