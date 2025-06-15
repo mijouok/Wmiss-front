@@ -203,8 +203,6 @@ function uploadTwitter(e) {
         <div class="img-preview">
           <img :src="avatarUrl" alt="" class="popup-img" @error="e => {e.target.src=defaultImage}">
         </div>
-        &nbsp;
-        &nbsp;
         <div>
           <el-upload
               class="avatar-uploader"
@@ -232,13 +230,13 @@ function uploadTwitter(e) {
     <!-- not avatar pop up -->
   <div v-if="showTwitterPopup" class="popup">
     <div class="popup-content">
-      <span @click="uploadTwitter" class="popup-close">&times;</span>
+      <div class="popup-content-header">
+        <span @click="uploadTwitter" class="popup-close">&times;</span>
+      </div>
       <div class="popup-section1">
         <div class="img-preview">
           <ImageSwiper :images="swiperImages" style="height: 100%;width: 100%;"/>
         </div>
-        &nbsp;
-        &nbsp;
         <div>
           <el-upload
               class="avatar-uploader"
@@ -347,10 +345,17 @@ function uploadTwitter(e) {
 
   background-color: rgba(0,0,0,0.4); /* 背景颜色，半透明 */
 }
+.popup-content-header {
+  display: flex;
+  justify-content: flex-end;
+  height: 15%;
+  width: 100%;
+  padding: 1%;
+}
 .popup-content {
   background-color: #fefefe;
   margin: 15% auto; /* 15% 从顶部和自动水平居中 */
-  padding: 20px;
+  //padding: 20px;
   border: 1px solid #888;
   width: 80%; /* 宽度 */
   height: 70%;
@@ -374,10 +379,9 @@ function uploadTwitter(e) {
 }
 .img-preview {
   display: inline-block;
-  width: 80%;
+  width: 50%;
   height: 50%;
   background-color: #fff;
-  border: 1px solid #ccc;
 }
 .popup-img {
   width: 100%;
